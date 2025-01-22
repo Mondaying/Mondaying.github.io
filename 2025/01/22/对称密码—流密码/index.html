@@ -1,0 +1,482 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta name="referrer" content="no-referrer"><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>对称密码—流密码 | Monday-Blog</title><meta name="author" content="Monday"><meta name="copyright" content="Monday"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="RC4加密流程初始化算法(KSA)Step1：先生成一个key，自定义。 Step2：生成一个S盒，S盒有256个元素，分别是0，1，2，······，255。  Step3：生成一个K盒，同样是256个元素，这个K盒用key来填充，如果key是345，那么就3，4，5，3，4，5，3，4，5······这样一直重复填充下去。  Step4：利用K盒来打乱我们刚刚生成的S盒，这个是通过一个规定的转">
+<meta property="og:type" content="article">
+<meta property="og:title" content="对称密码—流密码">
+<meta property="og:url" content="https://mondaying.cn/2025/01/22/%E5%AF%B9%E7%A7%B0%E5%AF%86%E7%A0%81%E2%80%94%E6%B5%81%E5%AF%86%E7%A0%81/index.html">
+<meta property="og:site_name" content="Monday-Blog">
+<meta property="og:description" content="RC4加密流程初始化算法(KSA)Step1：先生成一个key，自定义。 Step2：生成一个S盒，S盒有256个元素，分别是0，1，2，······，255。  Step3：生成一个K盒，同样是256个元素，这个K盒用key来填充，如果key是345，那么就3，4，5，3，4，5，3，4，5······这样一直重复填充下去。  Step4：利用K盒来打乱我们刚刚生成的S盒，这个是通过一个规定的转">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://mondaying.cn/img/51fde9041ff690de11db4c9dafbe0c01.jpg">
+<meta property="article:published_time" content="2025-01-22T07:58:06.000Z">
+<meta property="article:modified_time" content="2025-01-22T07:59:14.359Z">
+<meta property="article:author" content="Monday">
+<meta property="article:tag" content="学习">
+<meta property="article:tag" content="CTF">
+<meta property="article:tag" content="Crypto">
+<meta property="article:tag" content="对称密码">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://mondaying.cn/img/51fde9041ff690de11db4c9dafbe0c01.jpg"><link rel="shortcut icon" href="/img/p1.png"><link rel="canonical" href="https://mondaying.cn/2025/01/22/%E5%AF%B9%E7%A7%B0%E5%AF%86%E7%A0%81%E2%80%94%E6%B5%81%E5%AF%86%E7%A0%81/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        if (name && globalFn[key][name]) return
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const hour = new Date().getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (theme === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else theme === 'light' ? activateLightMode() : activateDarkMode()
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"简"},
+  noticeOutdate: {"limitDay":365,"position":"top","messagePrev":"It has been","messageNext":"days since the last update, the content of the article may be outdated."},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: {"chs_to_cht":"已切换为繁体中文","cht_to_chs":"已切换为简体中文","day_to_night":"已切换为深色模式","night_to_day":"已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#1f1f1f","position":"top-right"},
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '对称密码—流密码',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2025-01-22 15:59:14'
+}</script><link rel="stylesheet" href="/css/custom.css" media="defer" onload="this.media='all'"><!-- hexo injector head_end start --><link rel="stylesheet" href="https://cdn.cbd.int/hexo-butterfly-clock-anzhiyu/lib/clock.min.css" /><link rel="stylesheet" href="https://npm.elemecdn.com/hexo-butterfly-wowjs/lib/animate.min.css" media="print" onload="this.media='screen'"><link rel="stylesheet" href="/css/runtime.css" media="print" onload="this.media='all'"><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load', preloader.endLoading)
+
+  if (true) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/p2.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/p1.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-envelope-open"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/51fde9041ff690de11db4c9dafbe0c01.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Monday-Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">对称密码—流密码</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/comments/"><i class="fa-fw fas fa-envelope-open"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">对称密码—流密码</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-01-22T07:58:06.000Z" title="发表于 2025-01-22 15:58:06">2025-01-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-01-22T07:59:14.359Z" title="更新于 2025-01-22 15:59:14">2025-01-22</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.8k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>13分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="RC4"><a href="#RC4" class="headerlink" title="RC4"></a>RC4</h1><h2 id="加密流程"><a href="#加密流程" class="headerlink" title="加密流程"></a>加密流程</h2><h3 id="初始化算法-KSA"><a href="#初始化算法-KSA" class="headerlink" title="初始化算法(KSA)"></a><strong>初始化算法(KSA)</strong></h3><p><strong>Step</strong>1：先生成一个key，自定义。</p>
+<p><strong>Step2</strong>：生成一个S盒，S盒有256个元素，分别是0，1，2，······，255。</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/png/42554774/1737530118391-e6a0f588-432c-419e-8d43-7dac2223eaff.png" alt=""></p>
+<p><strong>Step3</strong>：生成一个K盒，同样是256个元素，这个K盒用key来填充，如果key是345，那么就3，4，5，3，4，5，3，4，5······这样一直重复填充下去。</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/png/42554774/1737530138496-f233326e-ce25-4e35-a533-5e8e827558d1.png" alt=""></p>
+<p><strong>Step4</strong>：利用K盒来打乱我们刚刚生成的S盒，这个是通过一个规定的转换式子，每做一次，就交换S盒里的两个值。</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/png/42554774/1737439889235-473701e8-5e24-4bab-b845-3c8eaad335bf.png?x-oss-process=image%2Fformat%2Cwebp" alt=""></p>
+<p>eg：按上面我们那个K表打乱后的S表如下，大家可以自己试一下（循环了七次）</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/png/42554774/1737530320751-f4ff1e23-f968-42bb-94c7-88b6055188d4.png" alt=""></p>
+<h3 id="伪随机子密码生成算法（PRGA"><a href="#伪随机子密码生成算法（PRGA" class="headerlink" title="伪随机子密码生成算法（PRGA)"></a><strong>伪随机子密码生成算法（PRGA)</strong></h3><p>这一步是为了生成一个新盒，这个新盒里是一些伪随机的子密码，用来加密我们的明文，这个生成过程也有规定的式子，如下</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/png/42554774/1737440962165-c5c6764c-3539-4afa-8620-194787c452dc.png?x-oss-process=image%2Fformat%2Cwebp" alt=""></p>
+<p>上图是用我们之前的K盒直接存储新生成的伪随机子密码，这无可厚非，只要S盒初始化过后（打乱后）K盒就没什么用了。</p>
+<p>之后就是加密过程，就是用我们最后得到的那个子密码来和明文做异或，得到密文。</p>
+<h2 id="例题"><a href="#例题" class="headerlink" title="例题"></a>例题</h2><h3 id="notRC4"><a href="#notRC4" class="headerlink" title="notRC4"></a>notRC4</h3><p><strong>题目</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> hashlib <span class="keyword">import</span> md5</span><br><span class="line"><span class="keyword">from</span> secret <span class="keyword">import</span> flag</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Oo0</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="variable language_">self</span>.O0 = [<span class="number">0</span>] * <span class="number">256</span></span><br><span class="line">        <span class="variable language_">self</span>.Ooo = <span class="number">0</span></span><br><span class="line">        <span class="variable language_">self</span>.Ooo0 = [<span class="number">0</span>] * <span class="number">256</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">256</span>):</span><br><span class="line">            <span class="variable language_">self</span>.O0[i] = i</span><br><span class="line">        <span class="variable language_">self</span>.oO0 = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">OO0</span>(<span class="params">self, oO0</span>):</span><br><span class="line">        l = <span class="built_in">len</span>(oO0)</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">256</span>):</span><br><span class="line">            <span class="variable language_">self</span>.Ooo0[i] = oO0[i % l]</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">256</span>):</span><br><span class="line">            <span class="variable language_">self</span>.oO0 = (<span class="variable language_">self</span>.oO0 + <span class="variable language_">self</span>.O0[i] + <span class="variable language_">self</span>.Ooo0[i]) % <span class="number">256</span></span><br><span class="line">            <span class="variable language_">self</span>.O0[i], <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0] = <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0], <span class="variable language_">self</span>.O0[i]</span><br><span class="line">        <span class="variable language_">self</span>.Ooo = <span class="variable language_">self</span>.oO0 = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">OO0o</span>(<span class="params">self, length</span>):</span><br><span class="line">        O = []</span><br><span class="line">        <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(length):</span><br><span class="line">            <span class="variable language_">self</span>.Ooo = (<span class="variable language_">self</span>.Ooo + <span class="number">1</span>) % <span class="number">256</span></span><br><span class="line">            <span class="variable language_">self</span>.oO0 = (<span class="variable language_">self</span>.oO0 + <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo]) % <span class="number">256</span></span><br><span class="line">            <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo], <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0] = <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0], <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo]</span><br><span class="line">            t = (<span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo] + <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0]) % <span class="number">256</span></span><br><span class="line">            O.append(<span class="variable language_">self</span>.O0[t])</span><br><span class="line">        <span class="built_in">print</span>(<span class="variable language_">self</span>.O0)</span><br><span class="line">        <span class="keyword">return</span> O</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">xor</span>(<span class="params">s1, s2</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">bytes</span>(<span class="built_in">map</span>((<span class="keyword">lambda</span> x: x[<span class="number">0</span>] ^ x[<span class="number">1</span>]), <span class="built_in">zip</span>(s1, s2)))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">enc</span>(<span class="params">msg</span>):</span><br><span class="line">    Oo0oO = Oo0()</span><br><span class="line">    Oo0oO.OO0(md5(msg).digest()[:<span class="number">8</span>])</span><br><span class="line">    O0O = Oo0oO.OO0o(<span class="built_in">len</span>(msg))</span><br><span class="line">    <span class="keyword">return</span> xor(msg, O0O)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(enc(flag))</span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">s = [166, 163, 208, 147, 181, 152, 69, 90, 253, 114, 150, 255, 218, 220, 34, 74, 63, 201, 70, 115, 233, 96, 43, 169, 103, 191, 14, 149, 143, 25, 105, 93, 199, 246, 51, 75, 20, 5, 107, 3, 52, 135, 111, 139, 113, 47, 184, 76, 161, 174, 23, 30, 173, 72, 198, 56, 85, 55, 106, 126, 244, 223, 104, 29, 112, 148, 219, 118, 165, 59, 98, 175, 125, 100, 17, 16, 108, 6, 214, 140, 130, 206, 89, 62, 4, 236, 251, 91, 28, 45, 18, 53, 1, 144, 193, 133, 73, 44, 57, 88, 250, 204, 177, 67, 120, 21, 79, 71, 2, 185, 211, 200, 65, 234, 117, 9, 226, 142, 230, 209, 132, 248, 242, 196, 101, 81, 238, 247, 119, 179, 131, 229, 94, 50, 22, 183, 24, 158, 190, 222, 155, 172, 19, 12, 225, 10, 189, 232, 146, 227, 212, 210, 31, 164, 138, 78, 122, 176, 121, 0, 194, 186, 162, 160, 188, 168, 216, 153, 37, 252, 127, 145, 33, 82, 58, 170, 61, 254, 136, 207, 8, 237, 159, 36, 239, 95, 178, 167, 182, 102, 27, 123, 60, 129, 42, 26, 99, 39, 97, 40, 235, 205, 7, 49, 202, 197, 109, 195, 245, 171, 180, 15, 46, 83, 48, 156, 92, 249, 38, 32, 203, 41, 124, 54, 217, 134, 154, 35, 157, 128, 137, 221, 84, 86, 215, 213, 80, 11, 116, 141, 241, 64, 224, 87, 77, 187, 68, 192, 151, 240, 13, 228, 231, 66, 110, 243]</span></span><br><span class="line"><span class="string">enc = b&quot;]7\xab\xc9\xd8\x90\x1f\xd2OP\xad\x87&#x27;0\xe1\xff=~&quot;</span></span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br></pre></td></tr></table></figure>
+<p><strong>考点</strong>：rc4，异或</p>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://cn-sec.com/archives/3093479.html">https://cn-sec.com/archives/3093479.html</a> 可以参考这篇博客理解</p>
+<p><a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1G64y1Y7p4/?spm_id_from=333.337.search-card.all.click&amp;vd_source=a01a62f772bf2e577e11004dfef0bde1">https://www.bilibili.com/video/BV1G64y1Y7p4/?spm_id_from=333.337.search-card.all.click&amp;vd_source=a01a62f772bf2e577e11004dfef0bde1</a> 这个视频也很棒</p>
+</blockquote>
+<p>虽然题目是notRC4，但流程上就是RC4，所以先了解一下RC4的过程。</p>
+<p>首先是<strong>初始化算法(KSA)</strong></p>
+<p>首先生成一个S盒，S盒有256个元素，分别是0，1，2，······，255，对应题目以下代码（代码只截取重要部分，建议定位到题目中分析）</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.O0 = [<span class="number">0</span>] * <span class="number">256</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">256</span>):</span><br><span class="line">            <span class="variable language_">self</span>.O0[i] = i</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>再生成一个K盒，同样是256个元素，这个K盒用key来填充，如果key是123，那么就1，2，3，1，2，3，1，2，3······这样一直重复填充下去，直到填充完毕，对应下面代码</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.Ooo0 = [<span class="number">0</span>] * <span class="number">256</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">OO0</span>(<span class="params">self, oO0</span>):</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">256</span>):</span><br><span class="line">        <span class="variable language_">self</span>.Ooo0[i] = oO0[i % l]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>接着我们要利用K盒来打乱我们刚刚生成的S盒，这个是通过一个规定的转换式子，每做一次，就交换S盒里的两个值，如下</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/png/42554774/1737439889235-473701e8-5e24-4bab-b845-3c8eaad335bf.png" alt=""></p>
+<p>因为S[i]是固定的，所以打乱完全取决于K盒，打乱后的S盒我们称为初始化后的S盒，对应以下代码</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">256</span>):</span><br><span class="line">           <span class="variable language_">self</span>.oO0 = (<span class="variable language_">self</span>.oO0 + <span class="variable language_">self</span>.O0[i] + <span class="variable language_">self</span>.Ooo0[i]) % <span class="number">256</span></span><br><span class="line">           <span class="variable language_">self</span>.O0[i], <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0] = <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0], <span class="variable language_">self</span>.O0[i]</span><br><span class="line">       <span class="variable language_">self</span>.Ooo = <span class="variable language_">self</span>.oO0 = <span class="number">0</span>		<span class="comment"># 这里是为了后面的使用，所以再次赋0，主要是上面部分</span></span><br></pre></td></tr></table></figure>
+<p>接着是<strong>伪随机子密码生成算法（PRGA)、加密阶段</strong></p>
+<p>这一步是为了生成一个新盒，这个新盒里是一些伪随机的子密码，用来加密我们的明文，这个生成过程也有规定的式子，如下</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/png/42554774/1737440962165-c5c6764c-3539-4afa-8620-194787c452dc.png" alt=""></p>
+<p>上图是用我们之前的K盒直接存储新生成的伪随机子密码，这无可厚非，只要S盒初始化过后（打乱后）K盒就没什么用了。这一部分对应题目代码如下（题目是用一个新的列表放子密码的，即O）</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">OO0o</span>(<span class="params">self, length</span>):</span><br><span class="line">        O = []</span><br><span class="line">        <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(length):</span><br><span class="line">            <span class="variable language_">self</span>.Ooo = (<span class="variable language_">self</span>.Ooo + <span class="number">1</span>) % <span class="number">256</span></span><br><span class="line">            <span class="variable language_">self</span>.oO0 = (<span class="variable language_">self</span>.oO0 + <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo]) % <span class="number">256</span></span><br><span class="line">            <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo], <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0] = <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0], <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo]</span><br><span class="line">            t = (<span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.Ooo] + <span class="variable language_">self</span>.O0[<span class="variable language_">self</span>.oO0]) % <span class="number">256</span></span><br><span class="line">            O.append(<span class="variable language_">self</span>.O0[t])</span><br><span class="line">        <span class="built_in">print</span>(<span class="variable language_">self</span>.O0)</span><br><span class="line">        <span class="keyword">return</span> O</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>之后就是加密过程，就是用我们最后得到的那个子密码来和明文做异或，得到密文。对应下面这段代码</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">xor</span>(<span class="params">s1, s2</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">bytes</span>(<span class="built_in">map</span>((<span class="keyword">lambda</span> x: x[<span class="number">0</span>] ^ x[<span class="number">1</span>]), <span class="built_in">zip</span>(s1, s2)))	<span class="comment"># zip会返回一个元组的列表，返回列表长度与最短的对象相同	</span></span><br><span class="line">xor(msg, O0O)	<span class="comment"># O0O就是上面return的O</span></span><br></pre></td></tr></table></figure>
+<p>到此，题目的加密过程完毕，输出了最后的S盒和密文</p>
+<p>这道题感觉难就难变量定义的稀奇古怪，让人没有看下去的欲望，如果分析不下去了建议休息会再看，不然真的脑壳痛（恼）</p>
+<p>那么我们要怎么求解明文呢？就要用到异或的知识。密文是通过异或得到的，要变回去，我们就得知道子密码盒，然后再异或一次就可以得到flag了，所以现在目的是求子密码盒。</p>
+<p>这里我们就得考虑flag的格式，我们可以想到flag肯定是以’}’结尾的，这个已知，我们和密文异或，就可以得到一个子密码，即S[t]，知道S[t]以后，我们通过index函数就可以查列表的下标，于是我们就可以知道t</p>
+<p>t知道以后我们关注这个式子<code>t = (self.O0[self.Ooo] + self.O0[self.oO0]) % 256</code>我们换种写法可能好看一点<code>t = (S[i] + S[j]) %256</code>，S[i]是已知的（最后一次i就是明文的长度，S盒又是知道的，所以S[i]已知）我们就可以得出S[j]，这样我们通过index就可以知道j，i和j都知道以后我们就可以逆推回去，把每一次的S[t]都算出来，这样和密文异或就可以把明文求出了，可以在纸上写一下，会很清晰</p>
+<p><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.nlark.com/yuque/0/2025/jpeg/42554774/1737444427312-6ad0c4ab-1185-4814-ad0e-98dbf1409cb1.jpeg" alt=""></p>
+<p>代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">s = [<span class="number">166</span>, <span class="number">163</span>, <span class="number">208</span>, <span class="number">147</span>, <span class="number">181</span>, <span class="number">152</span>, <span class="number">69</span>, <span class="number">90</span>, <span class="number">253</span>, <span class="number">114</span>, <span class="number">150</span>, <span class="number">255</span>, <span class="number">218</span>, <span class="number">220</span>, <span class="number">34</span>, <span class="number">74</span>, <span class="number">63</span>, <span class="number">201</span>, <span class="number">70</span>, <span class="number">115</span>, <span class="number">233</span>, <span class="number">96</span>, <span class="number">43</span>, <span class="number">169</span>, <span class="number">103</span>, <span class="number">191</span>, <span class="number">14</span>, <span class="number">149</span>, <span class="number">143</span>, <span class="number">25</span>, <span class="number">105</span>, <span class="number">93</span>, <span class="number">199</span>, <span class="number">246</span>, <span class="number">51</span>, <span class="number">75</span>, <span class="number">20</span>, <span class="number">5</span>, <span class="number">107</span>, <span class="number">3</span>, <span class="number">52</span>, <span class="number">135</span>, <span class="number">111</span>, <span class="number">139</span>, <span class="number">113</span>, <span class="number">47</span>, <span class="number">184</span>, <span class="number">76</span>, <span class="number">161</span>, <span class="number">174</span>, <span class="number">23</span>, <span class="number">30</span>, <span class="number">173</span>, <span class="number">72</span>, <span class="number">198</span>, <span class="number">56</span>, <span class="number">85</span>, <span class="number">55</span>, <span class="number">106</span>, <span class="number">126</span>, <span class="number">244</span>, <span class="number">223</span>, <span class="number">104</span>, <span class="number">29</span>, <span class="number">112</span>, <span class="number">148</span>, <span class="number">219</span>, <span class="number">118</span>, <span class="number">165</span>, <span class="number">59</span>, <span class="number">98</span>, <span class="number">175</span>, <span class="number">125</span>, <span class="number">100</span>, <span class="number">17</span>, <span class="number">16</span>, <span class="number">108</span>, <span class="number">6</span>, <span class="number">214</span>, <span class="number">140</span>, <span class="number">130</span>, <span class="number">206</span>, <span class="number">89</span>, <span class="number">62</span>, <span class="number">4</span>, <span class="number">236</span>, <span class="number">251</span>, <span class="number">91</span>, <span class="number">28</span>, <span class="number">45</span>, <span class="number">18</span>, <span class="number">53</span>, <span class="number">1</span>, <span class="number">144</span>, <span class="number">193</span>, <span class="number">133</span>, <span class="number">73</span>, <span class="number">44</span>, <span class="number">57</span>, <span class="number">88</span>, <span class="number">250</span>, <span class="number">204</span>, <span class="number">177</span>, <span class="number">67</span>, <span class="number">120</span>, <span class="number">21</span>, <span class="number">79</span>, <span class="number">71</span>, <span class="number">2</span>, <span class="number">185</span>, <span class="number">211</span>, <span class="number">200</span>, <span class="number">65</span>, <span class="number">234</span>, <span class="number">117</span>, <span class="number">9</span>, <span class="number">226</span>, <span class="number">142</span>, <span class="number">230</span>, <span class="number">209</span>, <span class="number">132</span>, <span class="number">248</span>, <span class="number">242</span>, <span class="number">196</span>, <span class="number">101</span>, <span class="number">81</span>, <span class="number">238</span>, <span class="number">247</span>, <span class="number">119</span>, <span class="number">179</span>, <span class="number">131</span>, <span class="number">229</span>, <span class="number">94</span>, <span class="number">50</span>, <span class="number">22</span>, <span class="number">183</span>, <span class="number">24</span>, <span class="number">158</span>, <span class="number">190</span>, <span class="number">222</span>, <span class="number">155</span>, <span class="number">172</span>, <span class="number">19</span>, <span class="number">12</span>, <span class="number">225</span>, <span class="number">10</span>, <span class="number">189</span>, <span class="number">232</span>, <span class="number">146</span>, <span class="number">227</span>, <span class="number">212</span>, <span class="number">210</span>, <span class="number">31</span>, <span class="number">164</span>, <span class="number">138</span>, <span class="number">78</span>, <span class="number">122</span>, <span class="number">176</span>, <span class="number">121</span>, <span class="number">0</span>, <span class="number">194</span>, <span class="number">186</span>, <span class="number">162</span>, <span class="number">160</span>, <span class="number">188</span>, <span class="number">168</span>, <span class="number">216</span>, <span class="number">153</span>, <span class="number">37</span>, <span class="number">252</span>, <span class="number">127</span>, <span class="number">145</span>, <span class="number">33</span>, <span class="number">82</span>, <span class="number">58</span>, <span class="number">170</span>, <span class="number">61</span>, <span class="number">254</span>, <span class="number">136</span>, <span class="number">207</span>, <span class="number">8</span>, <span class="number">237</span>, <span class="number">159</span>, <span class="number">36</span>, <span class="number">239</span>, <span class="number">95</span>, <span class="number">178</span>, <span class="number">167</span>, <span class="number">182</span>, <span class="number">102</span>, <span class="number">27</span>, <span class="number">123</span>, <span class="number">60</span>, <span class="number">129</span>, <span class="number">42</span>, <span class="number">26</span>, <span class="number">99</span>, <span class="number">39</span>, <span class="number">97</span>, <span class="number">40</span>, <span class="number">235</span>, <span class="number">205</span>, <span class="number">7</span>, <span class="number">49</span>, <span class="number">202</span>, <span class="number">197</span>, <span class="number">109</span>, <span class="number">195</span>, <span class="number">245</span>, <span class="number">171</span>, <span class="number">180</span>, <span class="number">15</span>, <span class="number">46</span>, <span class="number">83</span>, <span class="number">48</span>, <span class="number">156</span>, <span class="number">92</span>, <span class="number">249</span>, <span class="number">38</span>, <span class="number">32</span>, <span class="number">203</span>, <span class="number">41</span>, <span class="number">124</span>, <span class="number">54</span>, <span class="number">217</span>, <span class="number">134</span>, <span class="number">154</span>, <span class="number">35</span>, <span class="number">157</span>, <span class="number">128</span>, <span class="number">137</span>, <span class="number">221</span>, <span class="number">84</span>, <span class="number">86</span>, <span class="number">215</span>, <span class="number">213</span>, <span class="number">80</span>, <span class="number">11</span>, <span class="number">116</span>, <span class="number">141</span>, <span class="number">241</span>, <span class="number">64</span>, <span class="number">224</span>, <span class="number">87</span>, <span class="number">77</span>, <span class="number">187</span>, <span class="number">68</span>, <span class="number">192</span>, <span class="number">151</span>, <span class="number">240</span>, <span class="number">13</span>, <span class="number">228</span>, <span class="number">231</span>, <span class="number">66</span>, <span class="number">110</span>, <span class="number">243</span>]</span><br><span class="line">a = <span class="string">b&quot;]7\xab\xc9\xd8\x90\x1f\xd2OP\xad\x87&#x27;0\xe1\xff=~&quot;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">t=s.index(<span class="built_in">ord</span>(<span class="string">&#x27;&#125;&#x27;</span>)^<span class="built_in">ord</span>(<span class="string">&#x27;~&#x27;</span>))</span><br><span class="line">i=<span class="number">18</span></span><br><span class="line">sj=(t-s[i])%<span class="number">256</span></span><br><span class="line">j=s.index(sj)</span><br><span class="line">s[i],s[j]=s[j],s[i]</span><br><span class="line">j=(j-s[i])%<span class="number">256</span></span><br><span class="line">i=i-<span class="number">1</span></span><br><span class="line">t=(s[i]+s[j])%<span class="number">256</span></span><br><span class="line">flag=<span class="string">&#x27;&#125;&#x27;</span></span><br><span class="line"><span class="keyword">while</span> i&gt;<span class="number">0</span>:</span><br><span class="line">    flag+=(<span class="built_in">chr</span>((a[i-<span class="number">1</span>])^s[t]))</span><br><span class="line">    s[i],s[j]=s[j],s[i]</span><br><span class="line">    j=(j-s[i])%<span class="number">256</span></span><br><span class="line">    i=i-<span class="number">1</span></span><br><span class="line">    t=(s[i]+s[j])%<span class="number">256</span></span><br><span class="line"></span><br><span class="line">flag=flag[::-<span class="number">1</span>]</span><br><span class="line"><span class="built_in">print</span>(flag)</span><br><span class="line"></span><br><span class="line"><span class="comment"># flag&#123;einfache_rc4&#125;</span></span><br></pre></td></tr></table></figure>
+<h1 id="LCG"><a href="#LCG" class="headerlink" title="LCG"></a>LCG</h1><blockquote>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/vancasola/p/9942583.html">https://www.cnblogs.com/vancasola/p/9942583.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Linear_congruential_generator">https://en.wikipedia.org/wiki/Linear_congruential_generator</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/m0_74345946/article/details/132888135?ops_request_misc=%257B%2522request%255Fid%2522%253A%25221dd70df47b55af8763c80a26c08369d7%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&amp;request_id=1dd70df47b55af8763c80a26c08369d7&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~all~top_positive~default-1-132888135-null-null.142^v101^pc_search_result_base7&amp;utm_term=lcg&amp;spm=1018.2226.3001.4187">LCG入门-CSDN博客</a></p>
+</blockquote>
+<h2 id="加密流程-1"><a href="#加密流程-1" class="headerlink" title="加密流程"></a>加密流程</h2><p>LCG（linear congruential generator）线性同余算法由以下参数组成：</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>m</th>
+<th>a</th>
+<th>b</th>
+<th>X</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>性质</td>
+<td>模数</td>
+<td>乘数</td>
+<td>加数</td>
+<td>随机数</td>
+</tr>
+<tr>
+<td>作用</td>
+<td>取模</td>
+<td>移位</td>
+<td>偏移</td>
+<td>作为结果</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>LCG算法是如下的一个递推公式，每下一个随机数是当前随机数向左移动 $ log_2a<br> $ 位，加上一个 b，最后对 m 取余，使随机数限制在 0 ~ m-1 内</p>
+<p>$ X_{n+1}=(aX_{n}+b)\mod m $</p>
+<p>只要我们知道上面的重要参数，要求哪个都很轻松，所以要知道以下公式</p>
+<p><strong>公式1</strong>：反推$ X_n $</p>
+<p>$ X_{n}=(X_{n+1}-b)*a^{-1}\mod m $</p>
+<p><strong>公式2</strong>：求a</p>
+<p>$ a=(X_{i-1}-X_{i-2})^{-1}*(X_{i}-X_{i-1})\mod p $</p>
+<p><strong>公式3</strong>：求b</p>
+<p>$ b=(X_{i+1}-aX_i)\mod m $</p>
+<p><strong>公式4</strong>：求m</p>
+<p>$ t_i=(X_i-X_{i-1})=a(X_{i-1}-X_{i-2})=a*t_{i-1}\mod m $</p>
+<p>$ t_{i+1}<em>t_{i-1}-t_i</em>t_i=a^2t_{i-1}-a<em>t_{i-1}</em>a*t_{i-1}=0\mod m $</p>
+<p>上面这个式子就说明了$ t_{i+1}<em>t_{i-1}-t_i</em>t_i $是p的倍数，那么我们只要改变i，得到两个值，求一下公因子，就可以求出来m</p>
+<h2 id="例题-1"><a href="#例题-1" class="headerlink" title="例题"></a>例题</h2><h3 id="babyLCG"><a href="#babyLCG" class="headerlink" title="babyLCG"></a>babyLCG</h3><p><strong>题目</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> Crypto.Util.number <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">from</span> secret <span class="keyword">import</span> flag</span><br><span class="line"></span><br><span class="line">m = bytes_to_long(flag)</span><br><span class="line">bit_len = m.bit_length()</span><br><span class="line">a = getPrime(bit_len)</span><br><span class="line">b = getPrime(bit_len)</span><br><span class="line">p = getPrime(bit_len+<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">seed = m</span><br><span class="line">result = []</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>):</span><br><span class="line">    seed = (a*seed+b)%p</span><br><span class="line">    result.append(seed)</span><br><span class="line"><span class="built_in">print</span>(result)</span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">result = [34162247026397342478798569901414759621400, 48622925600981805953284319521855204943516, 873946493924376814098626588792484831751, 55835889122403142019357216062663278735799, 78197983655527534886328482392841803329879, 7826910556079551454813328357787595898220, 48420932174201345880210110234297855524418, 41702494213414751668850237022097487126943, 53964978232593731384060231097661907644428, 41614447441497057710125709202129649216700]</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+<p><strong>考点</strong>：LCG</p>
+<p>只要知道关于LCG的三个基础公式，这道题就很简单，建议自己推导一遍</p>
+<p>$ seed_i=（a*seed_{i-1}+b）\mod p</p>
+<p> $</p>
+<p>设$ t_i=(seed_i-seed_{i-1})=a(seed_{i-1}-seed_{i-2})=a*t_{i-1}\mod p $</p>
+<p>$ t_{i+1}<em>t_{i-1}-t_i</em>t_i=a^2t_{i-1}-a<em>t_{i-1}</em>a*t_{i-1}=0\mod p $</p>
+<p>上面这个式子就说明了$ t_{i+1}<em>t_{i-1}-t_i</em>t_i $是p的倍数，那么我们只要改变i，得到两个值，求一下公因子，就可以求出来p，p有了a也很好求</p>
+<p>$ a=(seed_{i-1}-seed_{i-2})^{-1}*t_i\mod p $</p>
+<p>a有了随便套一个式子就可以求b了，这样LCG的三个重要参数就都有了，第一个值逆回去就可以求出明文了</p>
+<p>代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> Crypto.Util.number <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">from</span> gmpy2 <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line">result = [<span class="number">34162247026397342478798569901414759621400</span>, <span class="number">48622925600981805953284319521855204943516</span>, <span class="number">873946493924376814098626588792484831751</span>, <span class="number">55835889122403142019357216062663278735799</span>, <span class="number">78197983655527534886328482392841803329879</span>, <span class="number">7826910556079551454813328357787595898220</span>, <span class="number">48420932174201345880210110234297855524418</span>, <span class="number">41702494213414751668850237022097487126943</span>, <span class="number">53964978232593731384060231097661907644428</span>, <span class="number">41614447441497057710125709202129649216700</span>]</span><br><span class="line">t1=result[<span class="number">1</span>]-result[<span class="number">0</span>]</span><br><span class="line">t2=result[<span class="number">2</span>]-result[<span class="number">1</span>]</span><br><span class="line">t3=result[<span class="number">3</span>]-result[<span class="number">2</span>]</span><br><span class="line">t4=result[<span class="number">4</span>]-result[<span class="number">3</span>]</span><br><span class="line">t5=result[<span class="number">5</span>]-result[<span class="number">4</span>]</span><br><span class="line">t6=result[<span class="number">6</span>]-result[<span class="number">5</span>]</span><br><span class="line"></span><br><span class="line">p = gcd((t6*t4-t5*t5),(t5*t3-t4*t4))</span><br><span class="line"><span class="built_in">print</span>(p)</span><br><span class="line">a=(t3*gmpy2.invert(t2,p))%p</span><br><span class="line"><span class="built_in">print</span>(a)</span><br><span class="line">b=(result[<span class="number">1</span>]-a*result[<span class="number">0</span>])%p</span><br><span class="line">m = ((result[<span class="number">0</span>]-b)*gmpy2.invert(a,p))%p</span><br><span class="line"><span class="built_in">print</span>(m)</span><br><span class="line"><span class="built_in">print</span>(long_to_bytes(m))</span><br><span class="line"></span><br><span class="line"><span class="comment"># flag&#123;gratulieren&#125;</span></span><br></pre></td></tr></table></figure>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://mondaying.cn">Monday</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://mondaying.cn/2025/01/22/%E5%AF%B9%E7%A7%B0%E5%AF%86%E7%A0%81%E2%80%94%E6%B5%81%E5%AF%86%E7%A0%81/">https://mondaying.cn/2025/01/22/%E5%AF%B9%E7%A7%B0%E5%AF%86%E7%A0%81%E2%80%94%E6%B5%81%E5%AF%86%E7%A0%81/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://mondaying.cn" target="_blank">Monday-Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%AD%A6%E4%B9%A0/">学习</a><a class="post-meta__tags" href="/tags/CTF/">CTF</a><a class="post-meta__tags" href="/tags/Crypto/">Crypto</a><a class="post-meta__tags" href="/tags/%E5%AF%B9%E7%A7%B0%E5%AF%86%E7%A0%81/">对称密码</a></div><div class="post-share"><div class="social-share" data-image="/img/51fde9041ff690de11db4c9dafbe0c01.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2024/11/24/%E6%A4%AD%E5%9C%86%E6%9B%B2%E7%BA%BF/" title="椭圆曲线"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/b2244295174cd731901b232aff9be29e.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">椭圆曲线</div></div><div class="info-2"><div class="info-item-1">椭圆曲线下面进行椭圆曲线相关知识的学习（基于crypto hack），中间穿插了一些数论和近世代数的几个知识点。 一. 预备知识学习的时候碰到了数论和近世代数的几个知识点，因为这两门我都没学完（尤其近世代数，完全没开始看），所有只能求尽量讲清楚吧。 群近世代数是主要研究代数系统（即非空集合）的学科，我们会在这个非空集合上定义满足一定条件的一种或多种二元运算（代数运算）。群是近世代数里面一个重要的概念。下面放一个课本上的定义。  简单解释一下就是在一个非空集合里定义一个二元运算，这个运算对于这个集合内的元素都满足 (1)结合率        (2)单位元    (3)逆元 其实还有一个封闭性，就是运算结果还是在这个集合里。 举一个例子，对于所有非零有理数（非空集合），和普通乘法（二元运算）构成了一个群，这个群满足结合律（是显然的），有单位元1（任意数与1做这个二元运算都等于它本身，且交换也满足），且对于任意一个a，都有$ \frac{1}{a} $与a做这个二元运算后等于单位元1（交换也满足) 阿贝尔群（Abel...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2024/11/15/%E6%A0%BC%E5%85%A5%E9%97%A8/" title="格入门"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/51fde9041ff690de11db4c9dafbe0c01.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-11-15</div><div class="info-item-2">格入门</div></div><div class="info-2"><div class="info-item-1">格入门这两周就是学习了一些格的基本知识，因为临近期中考，学的有点仓促，但总算是了解了一点，我把学到知识点也写了写，作业的解题思路会放在后面题目运用那里，可以跳转去看 一. 预备知识要学习格，是得有线性代数的知识才行的。（反正我看到那些矩阵向量什么的就回忆起上学期被线代支配的恐惧）因为我上学期线代学的也不好，忘的也差不多了，加上这里篇幅也有限，我也只能点一下cryptohack上面提到的一些线代知识，目前来看够用，不过强烈建议系统的学习一下线代。 向量和向量空间以二维向量空间举例，我们可以任意取一个点A，连接原点O和A点，这就构成成了一个向量。我们也可以用A点的坐标来表示这个向量,就像这样v=(x,y) 向量满足加减、数乘和点积运算，下面举例说明（加粗表示向量） v=(a , b)，w=(c , d) v + w = （a + c，b + d） （减法同理） c * w= （c * a， c * b ）      （数乘） v * w = a * c + b * d       ...</div></div></div></a><a class="pagination-related" href="/2024/11/24/%E6%A4%AD%E5%9C%86%E6%9B%B2%E7%BA%BF/" title="椭圆曲线"><img class="cover" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/b2244295174cd731901b232aff9be29e.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-11-24</div><div class="info-item-2">椭圆曲线</div></div><div class="info-2"><div class="info-item-1">椭圆曲线下面进行椭圆曲线相关知识的学习（基于crypto hack），中间穿插了一些数论和近世代数的几个知识点。 一. 预备知识学习的时候碰到了数论和近世代数的几个知识点，因为这两门我都没学完（尤其近世代数，完全没开始看），所有只能求尽量讲清楚吧。 群近世代数是主要研究代数系统（即非空集合）的学科，我们会在这个非空集合上定义满足一定条件的一种或多种二元运算（代数运算）。群是近世代数里面一个重要的概念。下面放一个课本上的定义。  简单解释一下就是在一个非空集合里定义一个二元运算，这个运算对于这个集合内的元素都满足 (1)结合率        (2)单位元    (3)逆元 其实还有一个封闭性，就是运算结果还是在这个集合里。 举一个例子，对于所有非零有理数（非空集合），和普通乘法（二元运算）构成了一个群，这个群满足结合律（是显然的），有单位元1（任意数与1做这个二元运算都等于它本身，且交换也满足），且对于任意一个a，都有$ \frac{1}{a} $与a做这个二元运算后等于单位元1（交换也满足) 阿贝尔群（Abel...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/p1.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Monday</div><div class="author-info-description">周1不放假~</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Mondaying"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Mondaying" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:2792663789@qq.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客！</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#RC4"><span class="toc-text">RC4</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8A%A0%E5%AF%86%E6%B5%81%E7%A8%8B"><span class="toc-text">加密流程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E7%AE%97%E6%B3%95-KSA"><span class="toc-text">初始化算法(KSA)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%AA%E9%9A%8F%E6%9C%BA%E5%AD%90%E5%AF%86%E7%A0%81%E7%94%9F%E6%88%90%E7%AE%97%E6%B3%95%EF%BC%88PRGA"><span class="toc-text">伪随机子密码生成算法（PRGA)</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BE%8B%E9%A2%98"><span class="toc-text">例题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#notRC4"><span class="toc-text">notRC4</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#LCG"><span class="toc-text">LCG</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8A%A0%E5%AF%86%E6%B5%81%E7%A8%8B-1"><span class="toc-text">加密流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BE%8B%E9%A2%98-1"><span class="toc-text">例题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#babyLCG"><span class="toc-text">babyLCG</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2025/01/22/%E5%AF%B9%E7%A7%B0%E5%AF%86%E7%A0%81%E2%80%94%E6%B5%81%E5%AF%86%E7%A0%81/" title="对称密码—流密码"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/51fde9041ff690de11db4c9dafbe0c01.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="对称密码—流密码"/></a><div class="content"><a class="title" href="/2025/01/22/%E5%AF%B9%E7%A7%B0%E5%AF%86%E7%A0%81%E2%80%94%E6%B5%81%E5%AF%86%E7%A0%81/" title="对称密码—流密码">对称密码—流密码</a><time datetime="2025-01-22T07:58:06.000Z" title="发表于 2025-01-22 15:58:06">2025-01-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/11/24/%E6%A4%AD%E5%9C%86%E6%9B%B2%E7%BA%BF/" title="椭圆曲线"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/b2244295174cd731901b232aff9be29e.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="椭圆曲线"/></a><div class="content"><a class="title" href="/2024/11/24/%E6%A4%AD%E5%9C%86%E6%9B%B2%E7%BA%BF/" title="椭圆曲线">椭圆曲线</a><time datetime="2024-11-24T03:01:31.000Z" title="发表于 2024-11-24 11:01:31">2024-11-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/11/15/%E6%A0%BC%E5%85%A5%E9%97%A8/" title="格入门"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/51fde9041ff690de11db4c9dafbe0c01.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="格入门"/></a><div class="content"><a class="title" href="/2024/11/15/%E6%A0%BC%E5%85%A5%E9%97%A8/" title="格入门">格入门</a><time datetime="2024-11-15T07:26:21.000Z" title="发表于 2024-11-15 15:26:21">2024-11-15</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/11/02/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA/" title="个人博客搭建"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/ffe8a67ee6f7a7fbfa530ecc212520bc.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="个人博客搭建"/></a><div class="content"><a class="title" href="/2024/11/02/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA/" title="个人博客搭建">个人博客搭建</a><time datetime="2024-11-02T08:10:06.000Z" title="发表于 2024-11-02 16:10:06">2024-11-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2024/10/29/%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/" title="第一篇文章"><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/e05bae03ad983cf1b23cca07ca3bacb7.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="第一篇文章"/></a><div class="content"><a class="title" href="/2024/10/29/%E7%AC%AC%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0/" title="第一篇文章">第一篇文章</a><time datetime="2024-10-29T06:03:10.000Z" title="发表于 2024-10-29 14:03:10">2024-10-29</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2023 - 2025 By Monday</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script>(() => {
+  const panguFn = () => {
+    if (typeof pangu === 'object') pangu.autoSpacingPage()
+    else {
+      btf.getScript('https://cdn.jsdelivr.net/npm/pangu/dist/browser/pangu.min.js')
+        .then(() => {
+          pangu.autoSpacingPage()
+        })
+    }
+  }
+
+  const panguInit = () => {
+    if (false){
+      GLOBAL_CONFIG_SITE.isPost && panguFn()
+    } else {
+      panguFn()
+    }
+  }
+
+  btf.addGlobalFn('pjaxComplete', panguInit, 'pangu')
+  document.addEventListener('DOMContentLoaded', panguInit)
+})()</script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+      
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax/es5/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><div class="aplayer no-destroy" data-id="12805936272" data-server="netease" data-type="playlist" data-fixed="true" data-autoplay="false"> </div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/click-heart.min.js" async="async" mobile="false"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/metingjs/dist/Meting.min.js"></script><script>(() => {
+  const destroyAplayer = () => {
+    if (window.aplayers) {
+      for (let i = 0; i < window.aplayers.length; i++) {
+        if (!window.aplayers[i].options.fixed) {
+          window.aplayers[i].destroy()
+        }
+      }
+    }
+  }
+
+  const runMetingJS = () => {
+    typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+  }
+
+  btf.addGlobalFn('pjaxSend', destroyAplayer, 'destroyAplayer')
+  btf.addGlobalFn('pjaxComplete', loadMeting, 'runMetingJS')
+})()</script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => fn())
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      pjax.loadUrl('/404.html')
+    }
+  })
+})()</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div><!-- hexo injector body_end start --><script data-pjax>
+  function butterfly_clock_anzhiyu_injector_config(){
+    var parent_div_git = document.getElementsByClassName('sticky_layout')[0];
+    var item_html = '<div class="card-widget card-clock"><div class="card-glass"><div class="card-background"><div class="card-content"><div id="hexo_electric_clock"><img class="entered loading" id="card-clock-loading" src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://cdn.cbd.int/hexo-butterfly-clock-anzhiyu/lib/loading.gif" style="height: 120px; width: 100%;" data-ll-status="loading"/></div></div></div></div></div>';
+    console.log('已挂载butterfly_clock_anzhiyu')
+    if(parent_div_git) {
+      parent_div_git.insertAdjacentHTML("afterbegin",item_html)
+    }
+  }
+  var elist = 'null'.split(',');
+  var cpage = location.pathname;
+  var epage = '/';
+  var qweather_key = '6f6eda168cee48fea492f6ad56f1a4a0';
+  var gaud_map_key = '05f3dc4654e2dd0cb3ef708ea49be87f';
+  var baidu_ak_key = 'undefined';
+  var flag = 0;
+  var clock_rectangle = '113.34532,23.15624';
+  var clock_default_rectangle_enable = 'false';
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_clock_anzhiyu_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_clock_anzhiyu_injector_config();
+  }
+  </script><script src="https://widget.qweather.net/simple/static/js/he-simple-common.js?v=2.0"></script><script data-pjax src="https://cdn.cbd.int/hexo-butterfly-clock-anzhiyu/lib/clock.min.js"></script><div class="js-pjax"><script async="async">var arr = document.getElementsByClassName('recent-post-item');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__zoomIn');
+    arr[i].setAttribute('data-wow-duration', '1s');
+    arr[i].setAttribute('data-wow-delay', '0s');
+    arr[i].setAttribute('data-wow-offset', '100');
+    arr[i].setAttribute('data-wow-iteration', '1');
+  }</script><script async="async">var arr = document.getElementsByClassName('card-widget');
+for(var i = 0;i<arr.length;i++){
+    arr[i].classList.add('wow');
+    arr[i].classList.add('animate__zoomIn');
+    arr[i].setAttribute('data-wow-duration', '');
+    arr[i].setAttribute('data-wow-delay', '');
+    arr[i].setAttribute('data-wow-offset', '');
+    arr[i].setAttribute('data-wow-iteration', '');
+  }</script></div><script defer src="https://npm.elemecdn.com/hexo-butterfly-wowjs/lib/wow.min.js"></script><script defer src="https://npm.elemecdn.com/hexo-butterfly-wowjs/lib/wow_init.js"></script><script data-pjax>
+  function butterfly_footer_beautify_injector_config(){
+    var parent_div_git = document.getElementById('footer-wrap');
+    var item_html = '<div id="workboard"></div><p id="ghbdages"><a class="github-badge" target="_blank" href="https://hexo.io/" style="margin-inline:5px" data-title="博客框架为Hexo_v6.2.0" title=""><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://img.shields.io/badge/Frame-Hexo-blue?style=flat&amp;logo=hexo" alt=""/></a><a class="github-badge" target="_blank" href="https://butterfly.js.org/" style="margin-inline:5px" data-title="主题版本Butterfly_v4.3.1" title=""><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://img.shields.io/badge/Theme-Butterfly-6513df?style=flat&amp;logo=bitdefender" alt=""/></a><a class="github-badge" target="_blank" href="https://vercel.com/" style="margin-inline:5px" data-title="本站采用多线部署，主线路托管于Vercel" title=""><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://img.shields.io/badge/Hosted-Vercel-brightgreen?style=flat&amp;logo=Vercel" alt=""/></a><a class="github-badge" target="_blank" href="https://dashboard.4everland.org/" style="margin-inline:5px" data-title="本站采用多线部署，备用线路托管于4EVERLAND" title=""><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://img.shields.io/badge/Hosted-4EVERLAND-22DDDD?style=flat&amp;logo=IPFS" alt=""/></a><a class="github-badge" target="_blank" href="https://github.com/" style="margin-inline:5px" data-title="本站项目由Github托管" title=""><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://img.shields.io/badge/Source-Github-d021d6?style=flat&amp;logo=GitHub" alt=""/></a><a class="github-badge" target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/" style="margin-inline:5px" data-title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可" title=""><img src= "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&amp;logo=Claris" alt=""/></a></p>';
+    console.log('已挂载butterfly_footer_beautify')
+    parent_div_git.insertAdjacentHTML("beforeend",item_html)
+    }
+  var elist = 'null'.split(',');
+  var cpage = location.pathname;
+  var epage = 'all';
+  var flag = 0;
+
+  for (var i=0;i<elist.length;i++){
+    if (cpage.includes(elist[i])){
+      flag++;
+    }
+  }
+
+  if ((epage ==='all')&&(flag == 0)){
+    butterfly_footer_beautify_injector_config();
+  }
+  else if (epage === cpage){
+    butterfly_footer_beautify_injector_config();
+  }
+  </script><script async src="/js/runtime.js"></script><!-- hexo injector body_end end --><script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginRootPath":"live2dw/","pluginJsPath":"lib/","pluginModelPath":"assets/","tagMode":false,"debug":false,"model":{"jsonPath":"/live2dw/assets/wanko.model.json"},"display":{"position":"left","width":150,"height":300},"mobile":{"show":true},"log":false});</script></body></html>
